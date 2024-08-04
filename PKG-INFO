@@ -1,10 +1,10 @@
 Metadata-Version: 2.1
 Name: p5
-Version: 0.0.725
+Version: 0.0.814
 Summary: A package wrapping pygame functionality in p5.js calling conventions.
 Home-page: https://github.com/gromko/p5js
 License: MIT
-Author: Joshua Bas, Grygoriy Gromko
+Author: Grygoriy Gromko
 Author-email: gr.gromko@gmail.com
 Requires-Python: >=3.8.0
 Classifier: License :: OSI Approved :: MIT License

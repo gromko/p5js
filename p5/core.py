@@ -3,6 +3,7 @@ import numpy as np
 import math
 import sys
 import types
+import random
 import __main__
 import builtins
 from pygame import Color
@@ -10,13 +11,14 @@ from functools import wraps
 from multipledispatch import dispatch
 from typing import Callable, Optional
 from p5.constants import *
+from p5.timedata import *
+from p5.drawcurve import *
 
 class Image(pygame.Surface):
     def __init__(self):
         pass
         
-pgWindow = None
-pgCanvas = None
+pg_Screen = None
 clock = None
 
 builtins.mouseX         = 0
@@ -34,7 +36,10 @@ builtins.width          = 360
 builtins.height         = 360
 builtins.shape          = []
 builtins.framerate      = 60
-builtins.isLooping      = True
+builtins.is_Looping     = True
+builtins.ANGLEMODE      = DEGREES
+builtins.RANDOMSEED     = 0
+builtins.MILLIS         = 0
 
 builtins.setup_method: Optional[Callable] = None
 builtins.draw_method: Optional[Callable] = None
@@ -47,8 +52,9 @@ builtins.key_pressed_method: Optional[Callable] = None
 builtins.key_released_method: Optional[Callable] = None
 
 
-vertices =[]
-shape = None
+vertices      = []
+curvevertices = []
+shape         = None
     
 
 def draw():
@@ -132,7 +138,7 @@ def run():    # Run a sketch.
     _draw()
     pass      
 
-def _usrColor(c, a=255):
+def to_Color(c, a=255):
     color = None
     if (type(c) == int) and (0 <= c) and (255 >= c):
         color = Color(c, c, c)
@@ -166,15 +172,21 @@ settings = {
 }
 
 # IMAGE
+
 def loadImage(path):
     return pygame.image.load(path)
 
 def image(img, x, y):
-    if (pgCanvas):
-        pgCanvas.blit(img, (x, y))
+    pg_Screen.blit(img, (x, y))
         
 def saveCanvas(filename):        
-    pygame.image.save(pgCanvas, filename)
+    pygame.image.save(pg_Screen, filename)
+
+def loadPixels(image):
+    return pygame.PixelArray(image)
+
+def updatePixels(pixels):
+    pixels.close()
 
 # ENVIRONMENT
     
@@ -187,74 +199,144 @@ def noCursor():
     pass
 
 # SHAPE
-def _filledArc(r, start, stop):
-    # arc_image = np.zeros((r.height, r.width, 3), dtype = np.uint8)
-    # cf = settings["fill_color"]
-    # cv.ellipse(arc_image, r.center, (r.height, r.width), 0, math.degrees(start), math.degrees(stop), 0)
 
-    # img = pygame.image.frombuffer(arc_image, r.size, "RGB")
-    # print("hello")
-    # pgCanvas.blit(img, img.get_rect(center=r.center))
-    # return
+def draw_rect(surf, x, y, width, height):    
+    shape = pygame.Surface((width, height)).convert_alpha()
+    rect = shape.get_rect()
+    background = (0, 0, 0, 0)
+    shape.fill(background)    
+    if (not settings["no_fill"]):
+        pygame.draw.rect(shape, settings["fill_color"], rect, width=0)
+    if (settings["stroke_weight"] > 0):
+        pygame.draw.rect(shape, settings["stroke_color"], rect, settings["stroke_weight"])
+    surf.blit(shape, (x, y))
+
+def draw_polygon(surf, vertices):     
+    if (not settings["no_fill"]):
+        pygame.draw.polygon(surf, settings["fill_color"], vertices, width=0)
+    if (settings["stroke_weight"] > 0):
+        pygame.draw.polygon(surf, settings["stroke_color"], vertices, settings["stroke_weight"])  
+
+def draw_circle(surf, origin, radius):
+    color  = settings["fill_color"]
+    stroke = settings["stroke_color"]
+    thickness = settings["stroke_weight"]
+    width = radius * 2
+    background = (0, 0, 0, 0)
+    circle = pygame.Surface((width, width)).convert_alpha()
+    rect = circle.get_rect()
+    circle.fill(background)
+    
+    pygame.draw.circle(circle, color, rect.center, radius)
+    if settings["stroke_weight"] > 0:
+        pygame.draw.circle(circle, stroke, rect.center, radius)
+        if (not(settings["no_fill"])):
+            pygame.draw.circle(circle, color, rect.center, radius - thickness)
+    if (settings["no_fill"]):
+        pygame.draw.circle(circle, background, rect.center, radius - thickness)
+    surf.blit(circle, (origin[0] - (rect.w / 2), origin[1] - (rect.w / 2)))
     pass
-  
-def _filledShape(func, *args, **kwargs):
-    if (pgCanvas):
-        if (not settings["no_fill"]):
-            func(pgCanvas, settings["fill_color"], *args, **kwargs, width=0)
+
+def draw_ellipse(surf, x, y, width, height):
+    color = settings["fill_color"]
+    stroke = settings["stroke_color"]
+    thickness = settings["stroke_weight"]
+    background = (0, 0, 0, 0)
+    ellipse = pygame.Surface((width + thickness*2, height+ thickness*2)).convert_alpha()
+    rect = ellipse.get_rect()
+    ellipse.fill(background)
+    pygame.draw.ellipse(ellipse, color, rect)
     
-        if (settings["stroke_weight"] > 0):
-            func(pgCanvas, settings["stroke_color"], *args, **kwargs, width=settings["stroke_weight"])
-    return
+    if settings["stroke_weight"] > 0:
+        pygame.draw.ellipse(ellipse, stroke, rect)
+        if (not(settings["no_fill"])):
+            pygame.draw.ellipse(ellipse, color, (thickness, thickness, width, height))
     
-def arc(x, y, w, h, start, stop):
-    r = pygame.Rect(x-w/2, y-h/2, w, h)
-    _filledArc(r, start, stop)
+    if (settings["no_fill"]):
+        pygame.draw.ellipse(ellipse, background, (thickness, thickness, width, height))
+    
+    surf.blit(ellipse, (x - (rect.w / 2), y - (rect.h / 2)))
+    pass
+    
+def draw_arc(surf, x, y, width, height, start_angle, stop_angle):
+    color = settings["fill_color"]
+    stroke = settings["stroke_color"]
+    thickness = settings["stroke_weight"]
+    background = (0, 0, 0, 0)
+    shape = pygame.Surface((width + thickness*2, height+ thickness*2)).convert_alpha()
+    rect = shape.get_rect()
+    
+    shape.fill(background)
+    #pygame.draw.ellipse(shape, stroke, (2,2,width-2,height-2))
+    
+    rx = width/2 + thickness + 0.5
+    ry = height/2 + thickness
+
+    cx = rx
+    cy = ry
+
+    # Start list of polygon points
+    p = [(cx, cy)]
+
+    # Get points on arc
+    for n in range(start_angle,stop_angle):
+        xx = cx + int(rx*math.cos(n*math.pi/180))
+        yy = cy + int(ry*math.sin(n*math.pi/180))
+        p.append((xx, yy))
+    p.append((cx, cy))
+
+    # Draw pie segment
+    if len(p) > 2:
+        pygame.draw.polygon(shape, stroke, p)
+    
+        
+    pygame.draw.ellipse(shape, background, (thickness, thickness, width, height))
+    
+    surf.blit(shape, (x - (rect.w / 2), y - (rect.h / 2)))
+    pass    
+
+def arc(x, y, w, h, start, stop):    
+    draw_arc(pg_Screen, x, y, w, h, start, stop)    
     pass
 
 def ellipse(x, y, w, h=None):
     if not h:
         h = w
-    
-    r = pygame.Rect(x-w/2, y-h/2, w, h)
-    _filledShape(pygame.draw.ellipse, r)
+    draw_ellipse(pg_Screen, x, y, w, h)
     pass
 
 def circle(x, y, d):
-    _filledShape(pygame.draw.circle, (x, y), d/2)
+    draw_circle(pg_Screen, (x, y), d/2)     
     pass
 
 def line(x1, y1, x2, y2):
-    if (pgCanvas):
-        pygame.draw.line(pgCanvas, settings["stroke_color"], (x1, y1), (x2, y2), width=1)
+    pygame.draw.line(pg_Screen, settings["stroke_color"], (x1, y1), (x2, y2), width = settings["stroke_weight"])
     pass
 
-def point(x, y):
-    _filledShape(pygame.draw.circle, (x, y), 1)
+def point(x, y):    
+    pygame.draw.circle(pg_Screen, settings["stroke_color"], (x, y), settings["stroke_weight"], 0)
     pass
 
 def quad(x1, y1, x2, y2, x3, y3, x4, y4):
-    _filledShape(pygame.draw.polygon, ((x1, y1), (x2, y2), (x3, y3), (x4, y4)))
+    draw_polygon(pg_Screen,((x1, y1), (x2, y2), (x3, y3), (x4, y4)))
     pass
 
 def rect(x, y, w, h):
-    r = pygame.Rect(x, y, w, h)
-    _filledShape(pygame.draw.rect, r)
+    draw_rect(pg_Screen,x, y, w, h)
     pass
 
 def square(x, y, s):
-    r = pygame.Rect(x, y, s, s)
-    _filledShape(pygame.draw.rect, r)
+    draw_rect(pg_Screen,x, y, s, s)
     pass
 
 def triangle(x1, y1, x2, y2, x3, y3):
-    _filledShape(pygame.draw.polygon, ((x1, y1), (x2, y2), (x3, y3)))
+    draw_polygon(pg_Screen,((x1, y1), (x2, y2), (x3, y3)))
     pass
 
 def text(txt, x,y):
     font = pygame.font.SysFont(settings["text_font"], settings["text_size"], settings["text_bold"],  settings["text_italic"])
     txtsurf = font.render(txt, True, settings["fill_color"])
-    pgCanvas.blit(txtsurf,(settings["origin_x"] + x, settings["origin_y"] + y))
+    pg_Screen.blit(txtsurf,(settings["origin_x"] + x, settings["origin_y"] + y))
     pass
 
 def textStyle(style):
@@ -280,9 +362,10 @@ def textFont(font, size=None): # Set current text font.
     pass
     
 def beginShape():
-    global shape, vertices
+    global shape, vertices, curvevertices
     shape = True
     vertices.clear()
+    curvevertices.clear()
     pass
 
 def vertex(x,y):
@@ -290,17 +373,35 @@ def vertex(x,y):
     if shape:
         vertices.append((x,y))
     pass
+
+def curveVertex(x,y):
+    global shape, curvevertices
+    if shape:
+        curvevertices.append((x,y))
+    pass    
     
-def endShape():
-    global shape, vertices    
-    _filledShape(pygame.draw.polygon, (vertices))
+def endShape(*args): # draw polygon/lines or spline curve
+    global shape, vertices,curvevertices
+    if len(args)==1 :
+        if args[0] == "close":   
+            if len(vertices) > 0:            
+                draw_polygon(pg_Screen,(vertices))
+            if len(curvevertices) > 0:            
+                spline(pg_Screen, settings["stroke_color"], True, curvevertices,100, 0,0,0, settings["stroke_weight"])    
+    else:
+        if len(vertices) > 0:            
+                pygame.draw.lines(pg_Screen, settings["stroke_color"], False, vertices, width = settings["stroke_weight"])
+        if len(curvevertices) > 0:            
+                spline(pg_Screen, settings["stroke_color"], False, curvevertices,100, 0,0,0, settings["stroke_weight"])
     shape = None
+    vertices.clear()
+    curvevertices.clear()
     pass        
 
 # TRANSFORM
 def rotate(angle):
-    global pgCanvas
-    pgCanvas = pygame.transform.rotate(pgCanvas, angle)
+    #global pgCanvas
+    #pgCanvas = pygame.transform.rotate(pgCanvas, angle)
     settings["rotate_amnt"] += angle
     pass
 
@@ -315,14 +416,12 @@ def translate(x, y):
     pass
 
 def createCanvas(w=100, h=100):
-    global pgWindow
-    global pgCanvas
+    global pg_Screen
     
     builtins.width = w
     builtins.height = h
-    pgWindow = pygame.display.set_mode((w, h))
-    pygame.display.set_caption('p5py')
-    pgCanvas = pygame.Surface(pgWindow.get_size(), pygame.SRCALPHA)
+    pg_Screen = pygame.display.set_mode((w, h))
+    pygame.display.set_caption('p5-python')
     pass   
     
 
@@ -331,7 +430,7 @@ def noFill():
     pass
 
 def stroke(c):
-    settings["stroke_color"] = _usrColor(c)
+    settings["stroke_color"] = to_Color(c)
     pass
 
 def strokeWeight(weight):
@@ -345,6 +444,8 @@ def noStroke():
     settings["stroke_weight"] = -1
     pass
 
+def isLooping():
+    return builtins.is_Looping
 # STRUCTURE
 def push():
     global settings
@@ -362,20 +463,37 @@ def frameRate(f):
     builtins.framerate = f
 
 def loop():    
-    builtins.isLooping = True
+    builtins.is_Looping = True
 
 def noLoop():    
-    builtins.isLooping = False
+    builtins.is_Looping = False
 
+def angleMode(a):
+    if a not in [DEGREES,RADIANS]:
+        raise ValueError("AngleMode must be radians/degrees")
+    builtins.ANGLEMODE = a
+    pass    
+
+def randomseed(a:int):
+    builtins.RANDOMSEED = a
+    random.seed(a)
+    pass
+
+def millis():
+    return milli_sec() - builtins.MILLIS
+    pass
+
+def keyIsDown(key):
+     return (builtins.key == key)     
+    
 def _setup():
 
     global clock         
     pygame.init()
+    builtins.MILLIS = milli_sec()
     builtins.setup_method()
     clock = pygame.time.Clock()       
 
-def keyIsDown(key):
-     return (builtins.key == key)     
 
 def _draw():
     
@@ -397,10 +515,8 @@ def _draw():
         builtins.mouse_pressed_method()
     pass  
 
-    global pgWindow
-    global pgCanvas
     global clock
-    doLoop = builtins.isLooping
+    doLoop = builtins.is_Looping
 
     cntLoop = 0
 
@@ -448,10 +564,8 @@ def _draw():
                         pass 
                                                        
             builtins.draw_method()
-
-            if (pgWindow and pgCanvas):
-                pgWindow.blit(pgCanvas, (settings["origin_x"], settings["origin_y"]))
-                pygame.display.flip()
+           
+            pygame.display.flip()
                     
             cntLoop = 1
             clock.tick(builtins.framerate)
@@ -491,131 +605,131 @@ def lerpColor(c1, c2, amnt):
 
 @dispatch(tuple)
 def background(c):
-    if (pgCanvas):
-        x = _usrColor(c)
-        pgCanvas.fill(x)
+
+    x = to_Color(c)
+    pg_Screen.fill(x)
     pass
 
 @dispatch(tuple, int)
 def background(c, a):
-    if (pgCanvas):
-        x = _usrColor(c, a)
-        pgCanvas.fill(x)
+
+    x = to_Color(c, a)
+    pg_Screen.fill(x)
     pass
     
 @dispatch(int)
 def background(c):
-    if (pgCanvas):
-        x = _usrColor(c)
-        pgCanvas.fill(x)
+
+    x = to_Color(c)
+    pg_Screen.fill(x)
     pass
 
 @dispatch(int, int)
 def background(c, a):
-    if (pgCanvas):
-        x = _usrColor(c, a)
-        pgCanvas.fill(x)
+
+    x = to_Color(c, a)
+    pg_Screen.fill(x)
     pass
 
 @dispatch(str)
 def background(c):
-    if (pgCanvas):
-        x = _usrColor(c)
-        pgCanvas.fill(x)
+
+    x = to_Color(c)
+    pg_Screen.fill(x)
     pass
 
 @dispatch(str, int)
 def background(c, a):
-    if (pgCanvas):
-        x = _usrColor(c, a)
-        pgCanvas.fill(x)
+
+    x = to_Color(c, a)
+    pg_Screen.fill(x)
     pass
 
 @dispatch(float)
 def background(c):
-    if (pgCanvas):
-        x = _usrColor(c)
-        pgCanvas.fill(x)
+
+    x = to_Color(c)
+    pg_Screen.fill(x)
     pass
 
 @dispatch(float, int)
 def background(c, a):
-    if (pgCanvas):
-        x = _usrColor(c, a)
-        pgCanvas.fill(x)
+
+    x = to_Color(c, a)
+    pg_Screen.fill(x)
     pass
 
 @dispatch(int, int, int)
 def background(r, g, b):
-    if (pgCanvas):
-        x = _usrColor((r, g, b))
-        pgCanvas.fill(x)
+
+    x = to_Color((r, g, b))
+    pg_Screen.fill(x)
     pass
 
 @dispatch(int, int, int, int)
 def background(r, g, b, a):
-    if (pgCanvas):
-        x = _usrColor((r, g, b), a)
-        pgCanvas.fill(x)
+
+    x = to_Color((r, g, b), a)
+    pg_Screen.fill(x)
     pass
 
 @dispatch(int)
 def fill(c):
-    settings["fill_color"] = _usrColor(c)
+    settings["fill_color"] = to_Color(c)
     settings["no_fill"] = False
     pass
 
 @dispatch(int, int)
 def fill(c, a):
-    settings["fill_color"] = _usrColor(c, a)
+    settings["fill_color"] = to_Color(c, a)
     settings["no_fill"] = False
     pass
 
 @dispatch(float)
 def fill(c):
-    settings["fill_color"] = _usrColor(c)
+    settings["fill_color"] = to_Color(c)
     settings["no_fill"] = False
     pass
 
 @dispatch(float, int)
 def fill(c, a):
-    settings["fill_color"] = _usrColor(c, a)
+    settings["fill_color"] = to_Color(c, a)
     settings["no_fill"] = False
     pass
 
 @dispatch(str)
 def fill(c):
-    settings["fill_color"] = _usrColor(c)
+    settings["fill_color"] = to_Color(c)
     settings["no_fill"] = False
     pass
 
 @dispatch(str, int)
 def fill(c, a):
-    settings["fill_color"] = _usrColor(c, a)
+    settings["fill_color"] = to_Color(c, a)
     settings["no_fill"] = False
     pass
 
 @dispatch(tuple)
 def fill(c):
-    settings["fill_color"] = _usrColor(c)
+    settings["fill_color"] = to_Color(c)
     settings["no_fill"] = False
     pass
 
 @dispatch(tuple, int)
 def fill(c, a):
-    settings["fill_color"] = _usrColor(c, a)
+    settings["fill_color"] = to_Color(c, a)
     settings["no_fill"] = False
     pass
 
 @dispatch(int, int, int)
 def fill(r, g, b):
-    settings["fill_color"] = _usrColor((r, g, b))
+    settings["fill_color"] = to_Color((r, g, b))
     settings["no_fill"] = False
     pass
 
 @dispatch(int, int, int, int)
 def fill(r, g, b, a):
-    settings["fill_color"] = _usrColor((r, g, b), a)
+    settings["fill_color"] = to_Color((r, g, b), a)
     settings["no_fill"] = False
     pass
 

@@ -14,11 +14,14 @@ CURSOR_BROKEN_X = pygame.cursors.broken_x
 CURSOR_TRI_LEFT = pygame.cursors.tri_left
 CURSOR_TRI_RIGHT = pygame.cursors.tri_right
 
+CLOSE       = "close"
 CENTER      = "center"
 BOLD        = "bold"
 ITALIC      = "italic"
 BOLDITALIC  = "bolditalic"
 NORMAL      = "normal"
+RADIANS     = "radians"
+DEGREES     = "degrees"
 
 # keys aliases
 BACKSPACE   = "backspace"

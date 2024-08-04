@@ -1,5 +1,6 @@
 import math
 import random as randompy
+from random import randint, triangular, seed, gauss
 
 def random(min=0, max=10):
     return randompy.randrange(min, max)
@@ -12,6 +13,9 @@ def constrain(num, low, high):
     elif num > high:
         return high
     return -1
+
+def pow(x,exp):
+    return x^exp
 
 def floor(x):
     return math.floor(x)
@@ -28,10 +32,10 @@ def dist(x1, y1, x2, y2):
 def exp(x):
     return math.exp(x)
 
-def lerp(start, stop, amount):
-    pass
+def lerp(a,b,t):
+    return (1 - t) * 1 + t * b
 
-def ln(x):
+def log(x):
     return math.log(x)
 
 def log10(x):
@@ -52,6 +56,9 @@ def rerange(value, start1, stop1, start2, stop2, clamp=False):
         return constrain(n, start2, stop2)
     else:
         return n
+
+def map(val,srclow,srcup,destlow,destup):
+    return (val-srclow)/(srcup-srclow) * (destup-destlow) + destlow
 
 def norm(value, start, stop):
     return rererange(value, start, stop, 0, 1)
@@ -91,6 +98,9 @@ def degrees(x):
 
 def radians(x):
     return math.radians(x)
+
+def randomgaussian(mean,dev):
+    return gauss(mean,dev)
 
 def integral(f, a, b, n=100, type="midpoint"):
     if type == "midpoint":

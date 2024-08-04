@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "p5"
-version = "0.0.725"
+version = "0.0.814"
 readme = "README.md"
 license = "MIT"
 homepage = "https://github.com/gromko/p5js"
 repository = "https://github.com/gromko/p5js"
 description = "A package wrapping pygame functionality in p5.js calling conventions."
-authors = ["Joshua Bas <joshua.n.bas@gmail.com>", "Grygoriy Gromko <gr.gromko>@gmail.com>"]
+authors = ["Grygoriy Gromko <gr.gromko>@gmail.com>"]
 include = [
     "LICENSE",
 ]

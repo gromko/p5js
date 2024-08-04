@@ -14,11 +14,11 @@ install_requires = \
 
 setup_kwargs = {
     'name': 'p5',
-    'version': '0.0.6',
+    'version': '0.0.8',
     'description': 'A package wrapping pygame functionality in p5.js calling conventions.',
     'long_description': '#p5 is a friendly tool for learning to code and make art. It is a free and open-source Python library built by an inclusive, nurturing community. p5 is a Python library that provides high level drawing functionality to help you quickly create simulations and interactive art using Python.',
-    'author': 'Joshua Bas',
-    'author_email': 'joshua.n.bas@gmail.com',
+    'author': 'Grygoriy Gromko',,
+    'author_email': 'gr.gromko@gmail.com',
     'maintainer':  'Grygoriy Gromko',
     'maintainer_email': 'gr.gromko@gmail.com',
     'url': 'https://github.com/gromko/p5js',
