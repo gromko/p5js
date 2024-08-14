@@ -1,0 +1,12 @@
+Metadata-Version: 2.1
+Name: p5-python
+Version: 0.6.29
+Summary: A package wrapping pygame functionality in p5.js calling conventions.
+Home-page: https://github.com/gromko/p5-python
+Author: Grygoriy Gromko
+Author-email: gr.gromko@gmail.com
+Maintainer: Grygoriy Gromko
+Maintainer-email: gr.gromko@gmail.com
+Requires-Python: >=3.8.0
+
+#p5 is a friendly tool for learning to code and make art. It is a free and open-source Python library built by an inclusive, nurturing community. p5 is a Python library that provides high level drawing functionality to help you quickly create simulations and interactive art using Python.

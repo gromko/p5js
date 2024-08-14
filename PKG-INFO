@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: p5
-Version: 0.5.04
+Version: 0.6.29
 Summary: A package wrapping pygame functionality in p5.js calling conventions.
 Home-page: https://github.com/gromko/p5js
 License: MIT
@@ -11,7 +11,7 @@ Classifier: License :: OSI Approved :: MIT License
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3.8
 Requires-Dist: pygame (>=2.1.2,<3.0.0)
-Project-URL: Repository, https://github.com/gromko/p5js
+Project-URL: Repository, https://github.com/gromko/p5-python
 Description-Content-Type: text/markdown
 
 # p5 is a friendly tool for learning to code and make art.

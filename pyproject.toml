@@ -1,10 +1,10 @@
 [tool.poetry]
 name = "p5"
-version = "0.5.04"
+version = "0.6.29"
 readme = "README.md"
 license = "MIT"
-homepage = "https://github.com/gromko/p5js"
-repository = "https://github.com/gromko/p5js"
+homepage = "https://github.com/gromko/p5-python"
+repository = "https://github.com/gromko/p5-python"
 description = "A package wrapping pygame functionality in p5.js calling conventions."
 authors = ["Grygoriy Gromko <gr.gromko>@gmail.com>"]
 include = [
@@ -14,6 +14,7 @@ include = [
 [tool.poetry.dependencies]
 python = ">=3.8.0"
 pygame = "^2.1.2"
+pycairo = "^1.20.0"
 
 [tool.poetry.dev-dependencies]
 
